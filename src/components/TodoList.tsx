@@ -1,20 +1,20 @@
 import React from 'react';
 import { TodoItem } from './TodoItem';
-import { Todo } from '../types/Todo';
+import { Todo, TodoId } from '../types/Todo';
 
 interface TodoListProps {
   todos: Todo[];
-  onUpdateTodo: (id: number, data: Partial<Todo>) => Promise<void>;
-  onDeleteTodo: (id: number) => Promise<void>;
-  onStartEditing: (id: number, title: string) => void;
-  onEditSubmit: (id: number, title: string) => Promise<void>;
+  onUpdateTodo: (id: TodoId, data: Partial<Todo>) => Promise<void>;
+  onDeleteTodo: (id: TodoId) => Promise<void>;
+  onStartEditing: (id: TodoId, title: string) => void;
+  onEditSubmit: (id: TodoId, title: string) => Promise<void>;
   onEditCancel: () => void;
-  editingTodoId: number | null;
+  editingTodoId: TodoId | null;
   editingTitle: string;
   setEditingTitle: (title: string) => void;
-  todoChange: number[];
-  deletingTodosId: number[];
-  deletTodo: number | null;
+  todoChange: TodoId[];
+  deletingTodosId: TodoId[];
+  deletTodo: TodoId | null;
 }
 
 export const TodoList: React.FC<TodoListProps> = ({

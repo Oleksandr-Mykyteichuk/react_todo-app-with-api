@@ -11,34 +11,22 @@ import {
   USER_ID,
   updateTodos,
 } from './api/todos';
-import { Todo } from './types/Todo';
+import { Todo, TodoId } from './types/Todo';
 import { TodoHeader } from './components/TodoHeader';
 import { TodoList } from './components/TodoList';
 import { TodoFooter } from './components/TodoFooter';
-
-enum Errors {
-  Load = 'Unable to load todos',
-  Empty = 'Title should not be empty',
-  Add = 'Unable to add a todo',
-  Delete = 'Unable to delete a todo',
-  Update = 'Unable to update a todo',
-}
-
-export enum Filter {
-  all = 'All',
-  completed = 'Completed',
-  active = 'Active',
-}
+import { Errors, Filter } from './types/enum';
+import { ErrorMessage } from './components/ErrorMessage';
 
 export const App: React.FC = () => {
   const [todos, setTodos] = useState<Todo[]>([]);
   const [errorMessage, setErrorMessage] = useState('');
   const [filterMethod, setFilterMethod] = useState(Filter.all);
   const [addingTodo, setAddingTodo] = useState<Todo | null>(null);
-  const [deletTodo, setDeletTodo] = useState<number | null>(null);
-  const [deletingTodosId, setDeletingTodosId] = useState<number[]>([]);
-  const [todoChange, setTodoChange] = useState<number[]>([]);
-  const [editingTodoId, setEditingTodoId] = useState<number | null>(null);
+  const [deleteTodo, setDeleteTodo] = useState<TodoId | null>(null);
+  const [deletingTodoIds, setDeletingTodoIds] = useState<TodoId[]>([]);
+  const [todoChange, setTodoChange] = useState<TodoId[]>([]);
+  const [editingTodoId, setEditingTodoId] = useState<TodoId | null>(null);
   const [editingTitle, setEditingTitle] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const todoInputRef = useRef<HTMLInputElement>(null);
@@ -97,30 +85,29 @@ export const App: React.FC = () => {
     }
   }, []);
 
-  useEffect(() => {
-    todoInputRef.current?.focus();
-  }, [todos]);
+  
 
-  const handleDeleteTodo = useCallback(async (todoId: number) => {
-    setDeletTodo(todoId);
+  const handleDeleteTodo = useCallback(async (todoId: TodoId) => {
+    setDeleteTodo(todoId);
     try {
       await deleteTodos(todoId);
       setTodos(prev => prev.filter(todo => todo.id !== todoId));
     } catch (e) {
       setErrorMessage(Errors.Delete);
     } finally {
-      setDeletTodo(null);
+      setDeleteTodo(null);
+      todoInputRef.current?.focus();
     }
   }, []);
 
-  const handleDeletingCompleted = useCallback(async () => {
+  const handleDeleteCompleted = useCallback(async () => {
     const completedTodos = todos.filter(todo => todo.completed);
-    const completedId = completedTodos.map(todo => todo.id);
+    const completedIds = completedTodos.map(todo => todo.id);
 
-    setDeletingTodosId(id => [...id, ...completedId]);
+    setDeletingTodoIds(id => [...id, ...completedIds ]);
 
     try {
-      const result = await Promise.allSettled(completedId.map(deleteTodos));
+      const result = await Promise.allSettled(completedIds .map(deleteTodos));
       const successId = completedTodos
         .filter((todo, index) => result[index].status === 'fulfilled')
         .map(todo => todo.id);
@@ -135,12 +122,13 @@ export const App: React.FC = () => {
     } catch (e) {
       setErrorMessage(Errors.Delete);
     } finally {
-      setDeletingTodosId(prev => prev.filter(id => !completedId.includes(id)));
+      setDeletingTodoIds(prev => prev.filter(id => !completedIds .includes(id)));
+      todoInputRef.current?.focus();
     }
   }, [todos]);
 
   const handleUpdateTodo = useCallback(
-    async (todoId: number, data: Partial<Todo>) => {
+    async (todoId: TodoId, data: Partial<Todo>) => {
       setTodoChange(prev => [...prev, todoId]);
       try {
         const updatedTodo = await updateTodos(todoId, data);
@@ -157,6 +145,7 @@ export const App: React.FC = () => {
     [],
   );
 
+  const handleErrorMessage = () => setErrorMessage('');
   const handleToggleAll = useCallback(async () => {
     const allCompleted = todos.every(todo => todo.completed);
     const newStatus = !allCompleted;
@@ -193,20 +182,20 @@ export const App: React.FC = () => {
   }, [todos]);
 
   const handleEditSubmit = useCallback(
-    async (id: number, title: string) => {
+    async (id: TodoId, title: string) => {
       const trimmedTitle = title.trim();
       const originalTodo = todos.find(t => t.id === id);
 
       if (trimmedTitle === '') {
         try {
-          setDeletTodo(id);
+          setDeleteTodo(id);
           await deleteTodos(id);
           setTodos(prev => prev.filter(todo => todo.id !== id));
           setEditingTodoId(null);
         } catch (e) {
           setErrorMessage(Errors.Delete);
         } finally {
-          setDeletTodo(null);
+          setDeleteTodo(null);
         }
 
         return;
@@ -234,7 +223,7 @@ export const App: React.FC = () => {
     [todos],
   );
 
-  const handleStartEditing = useCallback((id: number, title: string) => {
+  const handleStartEditing = useCallback((id: TodoId, title: string) => {
     setEditingTodoId(id);
     setEditingTitle(title);
   }, []);
@@ -290,8 +279,8 @@ export const App: React.FC = () => {
           editingTitle={editingTitle}
           setEditingTitle={setEditingTitle}
           todoChange={todoChange}
-          deletingTodosId={deletingTodosId}
-          deletTodo={deletTodo}
+          deletingTodosId={deletingTodoIds}
+          deletTodo={deleteTodo}
         />
 
         {todos.length > 0 && (
@@ -299,27 +288,16 @@ export const App: React.FC = () => {
             todos={todos}
             filterMethod={filterMethod}
             onFilterChange={setFilterMethod}
-            onClearCompleted={handleDeletingCompleted}
-            itemsLeft={itemsLeft}
+            onClearCompleted={handleDeleteCompleted}
+            items={itemsLeft}
           />
         )}
       </div>
 
-      <div
-        data-cy="ErrorNotification"
-        className={classNames(
-          'notification is-danger is-light has-text-weight-normal',
-          { hidden: !errorMessage },
-        )}
-      >
-        <button
-          data-cy="HideErrorButton"
-          type="button"
-          className="delete"
-          onClick={() => setErrorMessage('')}
-        />
-        {errorMessage}
-      </div>
+      <ErrorMessage
+      message={errorMessage}
+      handleErrorMessage={handleErrorMessage}
+      />
     </div>
   );
 };

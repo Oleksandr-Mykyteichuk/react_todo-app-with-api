@@ -1,13 +1,13 @@
 import React, { useEffect, useRef } from 'react';
 import classNames from 'classnames';
-import { Todo } from '../types/Todo';
+import { Todo, TodoId } from '../types/Todo';
 
 interface TodoItemProps {
   todo: Todo;
-  onUpdate: (id: number, data: Partial<Todo>) => Promise<void>;
-  onDelete: (id: number) => Promise<void>;
-  onStartEditing: (id: number, title: string) => void;
-  onEditSubmit: (id: number, title: string) => Promise<void>;
+  onUpdate: (id: TodoId, data: Partial<Todo>) => void;
+  onDelete: (id: TodoId) => void;
+  onStartEditing: (id: TodoId, title: string) => void;
+  onEditSubmit: (id: TodoId, title: string) => void;
   onEditCancel: () => void;
   isEditing: boolean;
   editingTitle: string;
